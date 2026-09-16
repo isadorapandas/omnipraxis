@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 
 import { Model as AvatarRodrigo } from '../../Avatar-rodrigo';
-
 import { GltfModel } from '../runtime/assets/GltfModel';
 import { useAutomaticInput } from '../runtime/input/useAutomaticInput';
 import { usePlayer } from '../runtime/player/PlayerContext';
