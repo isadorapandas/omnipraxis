@@ -1,5 +1,6 @@
 import { BaseScene } from './BaseScene';
 import { CircuitBreakerScene } from './CircuitBreakerScene';
+import { PressureGaugeScene } from './PressureGaugeScene';
 import { sceneManifest } from './sceneManifest';
 
 import type { SceneSlug } from './sceneManifest';
@@ -18,6 +19,10 @@ export const sceneRegistry = {
   'circuit-breaker': {
     ...sceneManifest['circuit-breaker'],
     component: CircuitBreakerScene,
+  },
+  'pressure-gauge': {
+    ...sceneManifest['pressure-gauge'],
+    component: PressureGaugeScene,
   },
 } satisfies Record<SceneSlug, SceneDefinition>;
 
