@@ -106,7 +106,7 @@ export const DesktopRoot = () => {
 
   return (
     <DesktopErrorBoundary>
-      <RuntimeApp>
+      <RuntimeApp sceneId="base">
         <BaseScene splatsUrl={state.assets.splats} collidersUrl={state.assets.colliders} />
       </RuntimeApp>
     </DesktopErrorBoundary>

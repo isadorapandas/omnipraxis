@@ -4,7 +4,7 @@ This document describes Omnipraxis as a reusable scene-authoring platform. It do
 
 The core architectural boundary is between the platform runtime and a scene specification.
 
-- The platform runtime owns input, player movement, centered interaction targeting, UI overlays, generic overlay controls, Spark renderer setup, physics setup, and reusable asset/effect abstractions.
+- The platform runtime owns input, player movement, centered interaction targeting, UI overlays, generic overlay controls, session-scoped event recording, Spark renderer setup, physics setup, and reusable asset/effect abstractions.
 - A scene specification owns asset URLs, component composition, transforms, local state, effect parameters, and scene-specific labeled interactions.
 
 ## Runtime Stack
@@ -22,7 +22,8 @@ flowchart TD
 
   DesktopMain[Desktop main.tsx] --> DesktopRoot[DesktopRoot]
   DesktopRoot --> RuntimeApp
-  RuntimeApp --> Canvas[R3F Canvas]
+   RuntimeApp --> EventLogRuntime[EventLogRuntime]
+   EventLogRuntime --> Canvas[R3F Canvas]
 
   Canvas --> SparkRuntime[SparkRuntime]
   Canvas --> InputRuntime[InputRuntime]
@@ -152,6 +153,7 @@ The shared runtime provides these reusable capabilities to mounted scene specifi
 - `SplatModel` for Spark splat loading and scene-scoped child Spark edit nodes.
 - `SplatEdit` for Spark SDF edit operations without scene code importing Spark internals.
 - `ParticleEmitter` for procedural Spark-based particle effects.
+- `EventLogRuntime` for a session-scoped event service accessible both inside the Canvas and to platform adapters. `RuntimeApp` accepts a scene identifier and an optional completion callback; the web adapter supplies JSON download, while the desktop adapter currently supplies no export callback.
 
 ## Scene Specification Responsibilities
 
@@ -169,6 +171,7 @@ A scene specification provides authored content and scene-specific logic.
 - Reads player idle time and orientation snapshots when scene-local behavior needs them.
 - Registers scene-local automatic input sources through `useAutomaticInput`.
 - Calls into `useUI` for screen feedback when scene-local logic needs it.
+- Records domain facts through `useEventLog` at accepted actions and logical transitions, supplies its initial domain state when the session starts, and explicitly completes the session when training finishes.
 
 ## Scene Specification Should Not Own
 
@@ -300,6 +303,32 @@ Keyboard WASD provides position velocity, either Shift key contributes held run 
 `GamepadInputDevice` polls `navigator.getGamepads()` before physics consumers. It selects one standard-mapped controller, applies radial deadzones to both sticks, maps the left stick to position velocity, maps the right stick to orientation velocity, maps L1 to held run state, and maps the rising edge of A/Cross to interaction. Its sampled velocities do not depend on render delta; `PlayerController` integrates them during fixed physics steps. Disconnect, focus loss, hidden visibility, and disposal remove persistent controller contributions, and newly selected or resumed controllers baseline the interaction button to avoid an accidental action from a held button.
 
 ## Platform API Summary
+
+### Event Log And Session Lifecycle
+
+`runtime/events/EventLog.ts` is a framework-independent append-only event store. It owns JSON payload capture, immutable events/snapshots, sequential numbering, and subscriptions. It knows no scene rules, SDKs, transport, or file format beyond its JSON-compatible data contract.
+
+`EventLogSession` owns session identity, the scene identifier, schema version, readiness/completion, and clocks. `EventLogRuntime` exposes the session through `useEventLog()` and sits above Canvas so the scene, player, and optional runtime services share the same instance. The provider is keyed by scene identifier; the router also remounts the active application on scene changes.
+
+```ts
+record(type, data, { source }?);
+subscribe(listener); // Live events only; returns an unsubscribe function.
+getSnapshot();
+startSession();
+completeSession();
+```
+
+Each event contains `sequence`, an ISO UTC `timestamp`, monotonic `elapsedMs`, `type`, optional `source`, and captured `data`. A session ID plus sequence identifies an event. Event types and payloads are producer-owned; the recorder contains no domain-specific interpretation. Payloads must be JSON-compatible; invalid values/cycles are rejected before appending. Stored data, returned events, and snapshots are frozen, and input payloads are copied, so producers and subscribers cannot rewrite history.
+
+An event is appended before notification. Listeners are captured at append time, notified in sequence order, and can unsubscribe. Nested recording queues further notifications until all eligible listeners have received the current event. New subscribers receive no historical replay; callers can read a snapshot separately. Synchronous listener errors and returned promise rejections are reported without interrupting other listeners; asynchronous work is never awaited and is owned by the subscriber. The logger provides no network delivery, retries, or connection management.
+
+Sessions have `pending`, `active`, and `completed` statuses. `PlayerRuntime` starts the session on the first applied spawn, excluding asset-loading time. Start and completion are idempotent. The session emits generic `session.started` and `session.completed` events from `runtime.session`; scenes can subscribe to readiness and record their initial domain state once. Only active sessions accept producer records: `record` returns `null` before readiness and after completion. Subsequent player spawns do not reset elapsed time or history.
+
+Scenes append all final action/state events before calling `completeSession`. Completion stores the end timestamp and monotonic duration, appends the terminal lifecycle event, and invokes the configured completion callback once with an immutable snapshot. It does not wait for cosmetic animations or asynchronous consumers. Callback failure leaves the completed log available through `getSnapshot` and does not automatically retry. Snapshot fields are `schemaVersion`, `sessionId`, `scene`, `status`, `startedAt`, `completedAt`, `durationMs`, and `events`.
+
+The web `App` supplies `downloadSessionLog` as the completion callback. This browser-only helper creates a JSON Blob, requests an anchor download with scene/start-time/session-ID in the filename, removes the anchor, and releases the object URL after a delay. It works on localhost without a backend. The browser controls whether and where the download is saved; requesting a download does not confirm disk persistence. A completed file covers events through completion, not later asynchronous responses. Active logs are memory-only and are lost when the scene session is discarded or the page is refreshed.
+
+Pressure Gauge is the first domain producer. Its event mapping lives beside the scene in `trainingEvents.ts`; other scenes currently use only the common readiness lifecycle. Subscribers should clean up using their unsubscribe functions. The event service does not use React state for each record and does not trigger scene rerenders on appends.
 
 ### `usePlayer`
 

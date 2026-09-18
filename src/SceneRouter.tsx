@@ -91,5 +91,5 @@ export const SceneRouter = () => {
     return <SceneNotFound onNavigate={handleNavigate} />;
   }
 
-  return <App key={route.slug} Scene={route.scene.component} />;
+  return <App key={route.slug} sceneId={route.slug} Scene={route.scene.component} />;
 };

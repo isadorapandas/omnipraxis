@@ -6,7 +6,7 @@
 - `pnpm dev` starts Vite and opens the browser; `pnpm preview` serves the built `dist` output.
 - `pnpm build` is the only configured typecheck path: it runs `tsc -b && vite build`.
 - `pnpm desktop:dev` starts the dedicated Tauri desktop app and its Vite renderer; `pnpm desktop:renderer:build` verifies the routing-free desktop frontend, and `pnpm desktop:build` creates the native executable without an installer bundle.
-- `pnpm lint` runs ESLint; there is no test script, Vitest config, or separate typecheck script.
+- `pnpm lint` runs ESLint; there is no separate typecheck script.
 - `pnpm format` runs Prettier over the repo; lockfiles and listed binary/media assets are ignored by `.prettierignore`.
 - After code edits, update `docs/architecture.md` whenever runtime boundaries, APIs, or data flow change, then run verification in this order: `pnpm format` -> `pnpm lint` -> `pnpm build`.
 - CI deploys `main` to GitHub Pages by checking out LFS assets, then running `pnpm install --frozen-lockfile`, `pnpm lint`, and `pnpm build` before uploading `dist`.
@@ -35,6 +35,7 @@
 - Player code lives under `src/runtime/player/`; scenes call `usePlayer().spawn(position, yaw?, pitch?)`, read `idleTime`, and can sample orientation through `getOrientation()`. `PlayerRuntime` keeps the single `PlayerController` disabled until spawn is applied.
 - `PlayerRuntime` owns centered interaction targeting, latched interaction consumption, held items, and registering the current interaction as a generic UI overlay button; it should not render DOM UI directly.
 - `UIRuntime` owns the separate DOM overlay root, reticle, screen tint/message feedback, and generic keyed overlay buttons (`setOverlayButton(id, button | null)`) with UI-owned placement/styling.
+- `EventLogRuntime` wraps Canvas and provides a scene-session-scoped `useEventLog` service. `PlayerRuntime` starts it once when the first spawn is applied; scenes record accepted domain actions/transitions and explicitly complete it. Web `App` supplies the automatic JSON-download completion callback. Event storage and session lifecycle must remain independent of scene rules, Convai, and browser export code.
 - DOM UI inside the R3F tree must not return raw `<div>` elements; UI overlays create separate React DOM roots and return `null` to R3F to avoid `Div is not part of the THREE namespace` errors.
 - Carried items are attached under the player's yaw node via `setHeldItem`; pass local zero transforms for held models unless intentionally offsetting them.
 - Input code lives under `src/runtime/input/`; each device writes to its own semantic input state, and composite sources resolve user input plus scene-registered automatic input into the shared player input. Position and orientation expose delta and velocity modalities; velocities persist, while resolved deltas are applied and cleared by the first eligible fixed physics step.

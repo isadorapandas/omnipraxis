@@ -6,7 +6,9 @@ import { getGasVelocity, isGasEmitting, ventGasProps } from './gas';
 import { advanceDisplayedPressure, PRESSURE_VALUES } from './pressure';
 import { ReplacementGauge } from './ReplacementGauge';
 import { canOperateValve, INITIAL_SIMULATION_STATE, transitionSimulation } from './simulation';
+import { recordTrainingStart, recordTrainingTransition } from './trainingEvents';
 import { GltfModel } from '../../runtime/assets/GltfModel';
+import { useEventLog } from '../../runtime/events/EventLogContext';
 import { useAutomaticInput } from '../../runtime/input/useAutomaticInput';
 import { usePlayer } from '../../runtime/player/PlayerContext';
 import { ParticleEmitter } from '../../runtime/spark/ParticleEmitter';
@@ -40,6 +42,8 @@ const MANOMETRO_CLIP = 'Ponteiro_Inicio_Ao_Final';
 export const PressureGaugeScene = () => {
   const { spawn, idleTime, getOrientation, setHeldItem } = usePlayer();
   const { showScreenFeedback } = useUI();
+  const eventLog = useEventLog();
+  const initialStateLogged = useRef(false);
   const automaticInput = useAutomaticInput();
   const automaticPitchPhaseRef = useRef(0);
   const [simulation, setSimulation] = useState(INITIAL_SIMULATION_STATE);
@@ -51,7 +55,26 @@ export const PressureGaugeScene = () => {
   const installedGaugeRef = useRef<GltfModelHandle>(null);
   const displayedPressure = useRef(PRESSURE_VALUES.medium);
 
+  useLayoutEffect(() => {
+    const recordInitialState = () => {
+      if (initialStateLogged.current || eventLog.getSnapshot().status !== 'active') return;
+      initialStateLogged.current = true;
+      recordTrainingStart(eventLog, INITIAL_SIMULATION_STATE);
+    };
+    const unsubscribe = eventLog.subscribe((event) => {
+      if (event.type === 'session.started' && event.source === 'runtime.session') {
+        recordInitialState();
+      }
+    });
+    // Also handle mounting after readiness, without replaying any recorded events.
+    recordInitialState();
+    return unsubscribe;
+  }, [eventLog]);
+
   const applyAction = (action: SimulationAction) => {
+    if (action.type !== 'finish-valve' && eventLog.getSnapshot().status !== 'active') {
+      return false;
+    }
     const previous = simulationRef.current;
     const next = transitionSimulation(previous, action);
 
@@ -62,6 +85,7 @@ export const PressureGaugeScene = () => {
     // Update the guard synchronously, before React publishes new interaction props.
     simulationRef.current = next;
     setSimulation(next);
+    recordTrainingTransition(eventLog, previous, next, action);
 
     if (previous.stage !== 'complete' && next.stage === 'complete') {
       showScreenFeedback('rgb(0 180 80 / 0.35)', 'Treinamento concluído', 'rgb(80 255 150)', 3);

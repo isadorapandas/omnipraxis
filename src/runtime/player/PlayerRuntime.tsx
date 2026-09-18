@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { PlayerRuntimeContext } from './PlayerContext';
 import { PlayerController } from './PlayerController';
+import { useEventLog } from '../events/EventLogContext';
 import { inputStore, playerInteractionInput, userInput } from '../input/InputStore';
 import { useUI } from '../ui/UIContext';
 
@@ -48,6 +49,7 @@ export const PlayerRuntime = ({ children, physicsTimeStep }: PlayerRuntimeProps)
   const get = useThree((state) => state.get);
   const setEvents = useThree((state) => state.setEvents);
   const { setOverlayButton } = useUI();
+  const { startSession } = useEventLog();
 
   const [enabled, setEnabled] = useState(false);
   const [spawnRequest, setSpawnRequest] = useState<PlayerSpawnRequest | null>(null);
@@ -130,7 +132,8 @@ export const PlayerRuntime = ({ children, physicsTimeStep }: PlayerRuntimeProps)
     setSpawnRequest(null);
     setEnabled(true);
     setIdleTime(0);
-  }, []);
+    startSession();
+  }, [startSession]);
 
   const getOrientation = useCallback(() => ({ ...orientationSnapshotRef.current }), []);
 
