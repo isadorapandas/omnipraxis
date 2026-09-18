@@ -8,8 +8,9 @@ import type { Root } from 'react-dom/client';
 
 //const CONVAI_CHARACTER_ID = '1324ea58-5ad3-11f1-b712-42010a7be02e'; Andressa 
 //const CONVAI_CHARACTER_ID = '8a1c1bb6-90f9-11f1-a4f2-42010a7be02f'; Felicity 
-const CONVAI_CHARACTER_ID = 'a0c60acb-56f3-403d-ad34-e032e5ba63d6'; // Rodrigo 2 
-//const CONVAI_CHARACTER_ID = '38ed3eb3-51f5-4c7d-9964-a5ff917c93e5'; // Rodrigo 
+//const CONVAI_CHARACTER_ID = 'a0c60acb-56f3-403d-ad34-e032e5ba63d6'; // Rodrigo 2 
+//const CONVAI_CHARACTER_ID = '38ed3eb3-51f5-4c7d-9964-a5ff917c93e5'; Rodrigo 
+const CONVAI_CHARACTER_ID = '5bbd5c46-bb13-4a16-8e0d-2702554c7fb6'; // Rodrigo 3
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export let globalConvaiClient: any = null;
