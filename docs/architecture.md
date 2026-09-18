@@ -148,6 +148,7 @@ The shared runtime provides these reusable capabilities to mounted scene specifi
 - `UIRuntime` for screen tint, top-center screen messages, reticle DOM overlay rendering, and generic keyed overlay buttons.
 - The web `App` adds `ConvaiRuntime` for the stock Convai widget overlay; the desktop adapter intentionally omits it.
 - `GltfModel` for GLB loading, cloning, opacity, material feedback, interaction targeting, optional physics, and blocking behavior.
+- `GltfModel` also owns per-instance animation mixers and imperative per-clip playback/pose control. Scenes own operation locks and the meaning of animation completion.
 - `SplatModel` for Spark splat loading and scene-scoped child Spark edit nodes.
 - `SplatEdit` for Spark SDF edit operations without scene code importing Spark internals.
 - `ParticleEmitter` for procedural Spark-based particle effects.
@@ -156,7 +157,8 @@ The shared runtime provides these reusable capabilities to mounted scene specifi
 
 A scene specification provides authored content and scene-specific logic.
 
-- A prop-free scene component in its own file under `src/scenes/`, registered through the scene manifest and component registry.
+- A scene entry at `src/scenes/<slug>/scene.tsx`, renderable without props and registered through the scene manifest and component registry. Keep descriptive named exports such as `BaseScene`, `CircuitBreakerScene`, and `PressureGaugeScene`.
+- Scene-local supporting modules beside the entry component, such as `src/scenes/pressure-gauge/pressure.ts`. Folder names match route slugs; `sceneManifest.ts`, `sceneRegistry.ts`, and `sceneRoute.ts` stay directly under `src/scenes/`.
 - Asset URLs using `import.meta.env.BASE_URL` where assets are loaded from public paths.
 - Component composition using platform primitives.
 - Spatial placement through positions, rotations, scales, and visibility/opacity controls.
@@ -358,6 +360,23 @@ blocksInteractions;
 
 The label is mandatory because it is shown by the player-owned overlay button. If a scene state changes the available label or behavior, select a different `PlayerInteraction` object for that state rather than branching inside one action.
 
+An optional React ref exposes `GltfModelHandle` from `runtime/assets/GltfAnimationController.ts`:
+
+```ts
+setClipBehavior(clipName, {
+  start, // Optional normalized progress; applied immediately when provided.
+  end, // Default 1.
+  speed, // Default 1 (authored speed); 0 holds the current pose.
+  onComplete, // Optional, called once on an animation update at the endpoint.
+});
+```
+
+Progress is between 0 and 1, mapped to the clip's first and last keyed times. Speed is a finite nonnegative multiplier; direction is determined by the endpoint relative to current progress. A first call without `start` begins at 0. Later calls without `start` preserve current progress. Every call replaces that clip's configuration and callback, including clearing an omitted callback. Calls for different clips operate independently using normal full-weight Three.js blending; completed clips remain active to hold their final poses. Clips are activated only when explicitly controlled.
+
+`start` with `speed: 0` supplies direct pose sampling, allowing a scene to drive a needle from its own continuously changing visual pressure without another smoothing layer. Endpoint completion is reported on the next animation update, never synchronously inside the setter, including when the requested pose already equals the endpoint. A paused clip away from its endpoint does not complete. Missing clip names or invalid progress/speed values throw errors. Each mounted model owns its controller bound to its clone; unmounting stops and uncaches its actions without invoking completion callbacks.
+
+Scenes acquire interaction locks synchronously when starting an operation and pass `interaction={null}` to affected models until completion. Logical state may change at animation start; completion governs interaction availability rather than simulation state. Cosmetic pose updates do not require a lock. Models intended to stay static receive no animation commands.
+
 ### `SplatModel`
 
 `SplatModel` is the platform splat asset boundary.
@@ -397,6 +416,7 @@ scale;
 particleCount;
 spawnRadius;
 velocity;
+velocityDrag;
 turbulence;
 lifetime;
 baseScale;
@@ -407,3 +427,9 @@ emitting;
 position;
 rotation;
 ```
+
+`ParticleEmitter` owns a fixed-size particle pool that starts empty. While emitting, it spawns at `particleCount / lifetime` particles per second, reuses expired slots, and samples each particle's initial position and velocity at birth. Stopping emission lets existing particles finish their lifetimes; restarting adds new particles without resetting survivors. Unmounting removes the effect immediately. Changing particle count or lifetime rebuilds the pool.
+
+`velocity` accepts a constant tuple or a function returning a tuple, evaluated only for new particles. `emitting` accepts a boolean or a function sampled each update. Scenes can use these functions to read current refs without causing React rerenders or rebuilding the pool. Updating a velocity input does not alter existing particles' captured velocities.
+
+`velocityDrag` is an optional nonnegative per-axis tuple, defaulting to `[0, 0, 0]`. Each velocity component decays exponentially with particle age; displacement is evaluated analytically, with ordinary linear movement for zero drag. For example, `Math.log(2) / 0.5` produces a half-second velocity half-life. Positions, velocities, drag axes, and particle sizes are emitter-local and inherit parent transforms. Scene code owns emission conditions and effect parameters; the runtime owns particle lifecycle, motion, and Spark updates. Existing constant-velocity smoke/flame effects use the same lifecycle and zero drag by default.

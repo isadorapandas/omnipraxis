@@ -2,13 +2,13 @@ import { useFrame } from '@react-three/fiber';
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 
-import { GltfModel } from '../runtime/assets/GltfModel';
-import { useAutomaticInput } from '../runtime/input/useAutomaticInput';
-import { usePlayer } from '../runtime/player/PlayerContext';
-import { ParticleEmitter } from '../runtime/spark/ParticleEmitter';
-import { SplatEdit } from '../runtime/spark/SplatEdit';
-import { SplatModel } from '../runtime/spark/SplatModel';
-import { useUI } from '../runtime/ui/UIContext';
+import { GltfModel } from '../../runtime/assets/GltfModel';
+import { useAutomaticInput } from '../../runtime/input/useAutomaticInput';
+import { usePlayer } from '../../runtime/player/PlayerContext';
+import { ParticleEmitter } from '../../runtime/spark/ParticleEmitter';
+import { SplatEdit } from '../../runtime/spark/SplatEdit';
+import { SplatModel } from '../../runtime/spark/SplatModel';
+import { useUI } from '../../runtime/ui/UIContext';
 
 const SCENE_SPLATS_URL = `${import.meta.env.BASE_URL}scenes/circuit-breaker/splats-lod.rad`;
 const SCENE_COLLIDERS_URL = `${import.meta.env.BASE_URL}scenes/circuit-breaker/colliders.glb`;

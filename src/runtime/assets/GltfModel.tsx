@@ -1,18 +1,23 @@
 import { Clone, useGLTF } from '@react-three/drei';
+import { useFrame } from '@react-three/fiber';
 import { RigidBody } from '@react-three/rapier';
-import { useCallback, useEffect, useId, useLayoutEffect, useRef } from 'react';
+import { useCallback, useEffect, useId, useImperativeHandle, useLayoutEffect, useRef } from 'react';
 import * as THREE from 'three';
 
+import { GltfAnimationController } from './GltfAnimationController';
 import { usePlayer } from '../player/PlayerContext';
 
+import type { GltfModelHandle } from './GltfAnimationController';
 import type { PlayerInteraction } from '../player/PlayerContext';
 import type { ThreeEvent } from '@react-three/fiber';
+import type { Ref } from 'react';
 
 type Vector3Tuple = [number, number, number];
 type GltfModelPhysicality = 'fixed' | 'dynamic' | null;
 type GltfModelColliders = 'trimesh' | 'hull';
 
 type GltfModelProps = {
+  ref?: Ref<GltfModelHandle>;
   url: string;
   visible?: boolean;
   physicality?: GltfModelPhysicality;
@@ -121,6 +126,7 @@ const applyMaterialState = (
 };
 
 export const GltfModel = ({
+  ref,
   url,
   visible = true,
   physicality = null,
@@ -133,7 +139,7 @@ export const GltfModel = ({
   interactionDistance = DEFAULT_INTERACTION_DISTANCE,
   blocksInteractions = true,
 }: GltfModelProps) => {
-  const { scene } = useGLTF(url);
+  const { scene, animations } = useGLTF(url);
   const {
     interactionTargetId,
     setInteractionTarget,
@@ -144,6 +150,37 @@ export const GltfModel = ({
   const interactionId = useId();
   const modelRef = useRef<THREE.Group>(null);
   const managedMaterialsRef = useRef<ManagedMaterial[]>([]);
+  const animationControllerRef = useRef<GltfAnimationController | null>(null);
+
+  useLayoutEffect(() => {
+    const model = modelRef.current;
+
+    if (!model) {
+      return;
+    }
+
+    const controller = new GltfAnimationController(model, animations);
+    animationControllerRef.current = controller;
+
+    return () => {
+      controller.dispose();
+      animationControllerRef.current = null;
+    };
+  }, [animations, scene]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      setClipBehavior(clipName, behavior) {
+        animationControllerRef.current?.setClipBehavior(clipName, behavior);
+      },
+    }),
+    [],
+  );
+
+  useFrame((_state, delta) => {
+    animationControllerRef.current?.update(delta);
+  });
 
   const isInteractionTarget = interactionTargetId === interactionId;
   const shouldBlockWithModel = visible && blocksInteractions && !interaction;

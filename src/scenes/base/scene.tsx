@@ -1,6 +1,6 @@
-import { GltfModel } from '../runtime/assets/GltfModel';
-import { usePlayer } from '../runtime/player/PlayerContext';
-import { SplatModel } from '../runtime/spark/SplatModel';
+import { GltfModel } from '../../runtime/assets/GltfModel';
+import { usePlayer } from '../../runtime/player/PlayerContext';
+import { SplatModel } from '../../runtime/spark/SplatModel';
 
 const SCENE_SPLATS_URL = `${import.meta.env.BASE_URL}scenes/base/splats.spz`;
 const SCENE_COLLIDERS_URL = `${import.meta.env.BASE_URL}scenes/base/colliders.glb`;

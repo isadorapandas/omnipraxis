@@ -2,7 +2,7 @@ import { convertFileSrc, invoke } from '@tauri-apps/api/core';
 import { Component, useEffect, useState } from 'react';
 
 import { RuntimeApp } from '../../src/RuntimeApp';
-import { BaseScene } from '../../src/scenes/BaseScene';
+import { BaseScene } from '../../src/scenes/base/scene';
 
 import type { ErrorInfo, ReactNode } from 'react';
 

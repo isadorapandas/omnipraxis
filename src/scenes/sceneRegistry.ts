@@ -1,6 +1,6 @@
-import { BaseScene } from './BaseScene';
-import { CircuitBreakerScene } from './CircuitBreakerScene';
-import { PressureGaugeScene } from './PressureGaugeScene';
+import { BaseScene } from './base/scene';
+import { CircuitBreakerScene } from './circuit-breaker/scene';
+import { PressureGaugeScene } from './pressure-gauge/scene';
 import { sceneManifest } from './sceneManifest';
 
 import type { SceneSlug } from './sceneManifest';
