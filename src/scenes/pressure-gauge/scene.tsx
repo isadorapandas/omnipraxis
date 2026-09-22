@@ -180,7 +180,7 @@ export const PressureGaugeScene = () => {
       <group
         name="pressure-gauge-assembly"
         position={[4.8, 0.02, 2.6]}
-        rotation={[0, -1.7, 0]}
+        rotation={[0, -1.8, 0]}
         scale={0.3}
       >
         <GltfModel url={DUTO_SEM_VALVULAS_URL} />
@@ -238,7 +238,7 @@ export const PressureGaugeScene = () => {
                 : { label: 'Abrir venteio', action: () => setValveOpen('venteio', true) }
           }
         />
-        <GltfModel url={BOX_URL} visible={false} physicality="fixed" scale={[16, 5, 2]} />
+        <GltfModel url={BOX_URL} visible={false} physicality="fixed" scale={[12, 5, 2]} />
         <ParticleEmitter
           {...ventGasProps}
           velocity={() => getGasVelocity(displayedPressure.current)}
