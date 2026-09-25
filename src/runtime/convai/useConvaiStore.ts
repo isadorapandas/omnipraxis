@@ -1,10 +1,11 @@
+import { useConvaiClient } from '@convai/web-sdk/react';
 import { create } from 'zustand';
 
+type ConvaiClient = ReturnType<typeof useConvaiClient>;
+
 interface ConvaiStore {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  client: any | null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  setClient: (client: any) => void;
+  client: ConvaiClient | null;
+  setClient: (client: ConvaiClient) => void;
 }
 
 export const useConvaiStore = create<ConvaiStore>((set) => ({
